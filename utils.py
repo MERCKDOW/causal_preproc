@@ -57,6 +57,7 @@ def clean_and_reconcile_pricing(df: pd.DataFrame, cols: list[str]):# -> pd.DataF
     print(f"Rows set to 0 due to NaNs in any of {cols}: {n_nan_rows}")
     print(f"Rows corrected where {LP} < {DP}: {n_inverted}")
     print(df_copy[DC].describe(percentiles=[0.01, 0.5, 0.99]))
+    return df_copy
 
 
 
