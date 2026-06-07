@@ -25,14 +25,18 @@ def create_optimal_binned_treatment(
         best_score = -float('inf')
         
         for k in bin_candidates:
-            tree = DecisionTreeRegressor(max_leaf_nodes=k, random_state=42)
+            tree = DecisionTreeRegressor(max_leaf_nodes=k,
+                                         min_samples_leaf=0.05,
+                                         random_state=42)
             scores = cross_val_score(tree, X_trans, y_trans, cv=5, scoring='r2')
             mean_score = np.mean(scores)
             if mean_score > best_score:
                 best_score = mean_score
                 best_k = k
         
-        optimal_tree = DecisionTreeRegressor(max_leaf_nodes=best_k, random_state=42)
+        optimal_tree = DecisionTreeRegressor(max_leaf_nodes=best_k,
+                                             min_samples_leaf=0.05,
+                                             random_state=42)
         optimal_tree.fit(X_trans, y_trans)
         bin_assignments = optimal_tree.apply(X_trans)
         unique_leaves = np.unique(bin_assignments)
@@ -119,7 +123,10 @@ def optimal_binning_dml(df, columns, target=None, bin_candidates=(3, 4, 5), frac
                 y_sample_pos = df_updated.loc[X_sample_pos.index, target]
 
                 for k in bin_candidates:
-                    dt = DecisionTreeRegressor(max_leaf_nodes=k, random_state=random_state)
+                    dt = DecisionTreeRegressor(max_leaf_nodes=k,
+                                               min_samples_leaf=0.05,
+                                               random_state=random_state)
+                    
                     dt.fit(X_sample_pos, y_sample_pos)
 
                     thresholds = dt.tree_.threshold
