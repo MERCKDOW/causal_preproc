@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 from typing import List, Tuple
+from sklearn.model_selection import KFold
+from itertools import combinations
+import gc
 
 
 
@@ -76,6 +79,66 @@ def multi_ordered_target_encode(
 
 
 
+def catboost_style_encoding(df, categorical_cols, target_col, n_splits=5, global_smoothing=10, max_combination_size=2):
+    """
+    Replicates CatBoost-style target encoding by adding new columns to the input DataFrame.
+
+    Parameters:
+    - df: pandas DataFrame (modified in-place)
+    - categorical_cols: list of categorical column names
+    - target_col: name of the target column
+    - n_splits: number of folds for cross-validated encoding
+    - global_smoothing: regularization strength
+    - max_combination_size: max number of columns to combine
+
+    Returns:
+    - df: The modified DataFrame with new encoded columns.
+    - new_encoded_cols: list of the newly created column names.
+    """
+    global_mean = df[target_col].mean()
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    new_encoded_cols = []
+
+    # Generate all combinations of categorical columns
+    all_combinations = []
+    for r in range(1, max_combination_size + 1):
+        all_combinations += list(combinations(categorical_cols, r))
+
+    for combo in all_combinations:
+        # Create a clean feature name
+        base_name = "_".join([str(c).replace('_ord', '') for c in combo])
+        encoded_col_name = f"target_enc_{base_name}"
+        new_encoded_cols.append(encoded_col_name)
+
+        # Create temporary combined key for grouping
+        temp_key = "_temp_" + "_".join([str(c) for c in combo])
+        df[temp_key] = df[list(combo)].astype(str).agg("_".join, axis=1)
+
+        # Initialize the new column with NaN
+        df[encoded_col_name] = np.nan
+
+        for train_idx, val_idx in kf.split(df):
+            # Compute stats on the training folds
+            stats = df.iloc[train_idx].groupby(temp_key)[target_col].agg(['mean', 'count'])
+
+            # Apply smoothing
+            smoothed_values = (
+                (stats['mean'] * stats['count'] + global_mean * global_smoothing) /
+                (stats['count'] + global_smoothing)
+            )
+
+            # Map to the validation fold
+            df.loc[df.index[val_idx], encoded_col_name] = df.iloc[val_idx][temp_key].map(smoothed_values)
+            gc.collect()
+
+        # Fill missing values (unseen categories) with global mean
+        df[encoded_col_name] = df[encoded_col_name].fillna(global_mean)
+
+        # Cleanup temporary key
+        df.drop(columns=[temp_key], inplace=True)
+        print(f"Created: {encoded_col_name}")
+
+    return df, new_encoded_cols
 
 #=====
 #
