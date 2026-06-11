@@ -101,6 +101,33 @@ def add_seasonal_harmonics(df, timestamp_col, periods):
 
 
 
+def filter_rare_categories(df, categorical_cols, threshold):
+    """
+    Removes rows from the DataFrame where any specified categorical column
+    has a category whose relative frequency is below the threshold.
+
+    Parameters:
+    - df (pd.DataFrame): Input DataFrame
+    - categorical_cols (list): List of column names (categorical)
+    - threshold (float): Minimum percentage threshold (0.0 to 1.0)
+
+    Returns:
+    - pd.DataFrame: Filtered DataFrame
+    """
+    df_filtered = df.copy()
+
+    for col in categorical_cols:
+        freq = df_filtered[col].value_counts(normalize=True)
+        valid_categories = freq[freq >= threshold].index
+        #print(valid_categories)
+
+
+
+        # Filter rows where the category is common enough
+        df_filtered = df_filtered[df_filtered[col].isin(valid_categories)]
+        df.reset_index(drop=True, inplace=True)
+
+    return df_filtered
 
 #=============
 #USAGE
