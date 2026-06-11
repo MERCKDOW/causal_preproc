@@ -26,7 +26,7 @@ def create_optimal_binned_treatment(
         
         for k in bin_candidates:
             tree = DecisionTreeRegressor(max_leaf_nodes=k,
-                                         min_samples_leaf=0.05,
+                                         min_samples_leaf=0.1,
                                          random_state=42)
             scores = cross_val_score(tree, X_trans, y_trans, cv=5, scoring='r2')
             mean_score = np.mean(scores)
@@ -35,7 +35,7 @@ def create_optimal_binned_treatment(
                 best_k = k
         
         optimal_tree = DecisionTreeRegressor(max_leaf_nodes=best_k,
-                                             min_samples_leaf=0.05,
+                                             min_samples_leaf=0.1,
                                              random_state=42)
         optimal_tree.fit(X_trans, y_trans)
         bin_assignments = optimal_tree.apply(X_trans)
