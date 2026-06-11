@@ -4,8 +4,8 @@ from typing import List, Tuple
 from sklearn.model_selection import KFold
 from itertools import combinations
 import gc
-
-
+from category_encoders import CatBoostEncoder
+#pip install category_encoders
 
 
 def multi_ordered_target_encode(
@@ -80,6 +80,7 @@ def multi_ordered_target_encode(
 
 
 def catboost_style_encoding(df, categorical_cols, target_col, n_splits=5, global_smoothing=10, max_combination_size=2):
+    
     """
     Replicates CatBoost-style target encoding by adding new columns to the input DataFrame.
 
@@ -95,6 +96,7 @@ def catboost_style_encoding(df, categorical_cols, target_col, n_splits=5, global
     - df: The modified DataFrame with new encoded columns.
     - new_encoded_cols: list of the newly created column names.
     """
+
     global_mean = df[target_col].mean()
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
     new_encoded_cols = []
@@ -139,6 +141,29 @@ def catboost_style_encoding(df, categorical_cols, target_col, n_splits=5, global
         print(f"Created: {encoded_col_name}")
 
     return df, new_encoded_cols
+
+import pandas as pd
+
+def apply_catboost_encoding(df: pd.DataFrame, target: pd.Series, cols_to_encode: list) -> pd.DataFrame:
+    """
+    Encodes specified columns using CatBoost encoding and adds them to the dataframe 
+    as new '_encoded' columns, preserving the originals and the index.
+    """
+    # Initialize the encoder
+    encoder = CatBoostEncoder(cols=cols_to_encode)
+    
+    # Generate the encoded values
+    # We fit_transform on the original columns using the target
+    encoded_values = encoder.fit_transform(df[cols_to_encode], target)
+    
+    # Rename these new columns so they are clearly identified as the numeric versions
+    encoded_values.columns = [f"{col}_encoded" for col in cols_to_encode]
+    
+    # Concatenate directly to the original dataframe
+    # This preserves the original index and the original categorical columns
+    return pd.concat([df, encoded_values], axis=1)
+
+
 
 #=====
 #

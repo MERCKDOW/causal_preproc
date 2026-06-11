@@ -124,7 +124,7 @@ def optimal_binning_dml(df, columns, target=None, bin_candidates=(3, 4, 5), frac
 
                 for k in bin_candidates:
                     dt = DecisionTreeRegressor(max_leaf_nodes=k,
-                                               min_samples_leaf=0.05,
+                                               min_samples_leaf=0.1,
                                                random_state=random_state)
                     
                     dt.fit(X_sample_pos, y_sample_pos)
