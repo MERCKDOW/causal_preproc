@@ -162,51 +162,71 @@ def filter_rare_categories_(df, categorical_cols, threshold):
 
     return df_filtered
 
-#=============
-#USAGE
-#=============
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# 1. Setup a dummy dataframe with a POSIX timestamp
-# (e.g., hourly data starting from Jan 1, 2024)
-#timestamps = pd.date_range("2024-01-01", periods=100, freq="h").astype('int64') // 10**9
-#df = pd.DataFrame({
-#    'posixtimestamp': timestamps,
-#    'treatment': np.random.binomial(1, 0.5, 100),
-#    'target': np.random.normal(0, 1, 100)
-#})
+def plot_T_histogram(scores, clip_outliers=False):
+    """
+    Plots a histogram of Treatment values, automatically handling 
+    unknown bounds and distributions.
+    
+    Parameters:
+    pdp_scores (array-like): The floating point treatment values.
+    clip_outliers (bool): If True, clips data to the 1st and 99th percentiles 
+                          to visualize the core distribution if extreme outliers exist.
+    """
+    # Convert to pandas Series and drop NaNs to prevent plotting errors
+    data = pd.Series(scores).dropna()
+    
+    if len(data) == 0:
+        print("Error: The provided data is empty or contains only NaNs.")
+        return
 
-# 2. Define your frequencies in seconds
-# Daily: 24 * 60 * 60 = 86,400
-# Weekly: 7 * 86,400 = 604,800
-# Monthly (approx 30.44 days): 30.44 * 86,400 = 2,630,016
-#harmonic_periods = (
-#    ('daily', 86400),
-#    ('weekly', 604800),
-#    ('monthly', 2630016)
-#)
+    # Calculate summary statistics to display on the plot
+    p_min = data.min()
+    p_max = data.max()
+    p_mean = data.mean()
+    p_median = data.median()
+    zeros_count = (data == 0.0).sum()
+    zeros_pct = (zeros_count / len(data)) * 100
 
-# 3. Apply the function
-#df_enriched, time_confounder_cols = add_seasonal_harmonics(
-#    df=df, 
-#    timestamp_col='posixtimestamp', 
-#    periods=harmonic_periods
-#)
+    # Handle extreme outliers for better visualization if requested
+    if clip_outliers:
+        lower_bound = data.quantile(0.01)
+        upper_bound = data.quantile(0.99)
+        data = data.clip(lower=lower_bound, upper=upper_bound)
+        title_suffix = " (Clipped at 1st & 99th Percentiles)"
+    else:
+        title_suffix = " (Raw Data)"
 
-# View the generated column names
-#print("New Harmonic Columns:", time_confounder_cols)
-# Output: ['posixtimestamp_sin_daily', 'posixtimestamp_cos_daily', ...]
+    # Set up the plot
+    plt.figure(figsize=(10, 6))
+    
+    # Plot histogram with KDE (Kernel Density Estimate) and automatic binning
+    sns.histplot(data, bins='auto', kde=True, color='steelblue', stat='count')
 
-# 4. Use in CausalForestDML
-#from econml.dml import CausalForestDML
+    # Add vertical lines for mean and median to immediately identify skewness
+    plt.axvline(p_mean, color='red', linestyle='dashed', linewidth=1.5, label=f'Mean: {p_mean:.4f}')
+    plt.axvline(p_median, color='green', linestyle='dashed', linewidth=1.5, label=f'Median: {p_median:.4f}')
 
-# Assuming you have other features (X) for heterogeneity
-#X = df_enriched[['some_other_feature']] if 'some_other_feature' in df_enriched.columns else None
+    # Add text box with distribution bounds and zero-inflation check
+    stats_text = (
+        f"Actual Min: {p_min:.4f}\n"
+        f"Actual Max: {p_max:.4f}\n"
+        f"Zero Values: {zeros_count} ({zeros_pct:.1f}%)"
+    )
+    plt.gca().text(0.95, 0.5, stats_text, transform=plt.gca().transAxes, 
+                   fontsize=10, verticalalignment='center', horizontalalignment='right',
+                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
-# Pass the harmonic features directly as confounders (W)
-#W = df_enriched[time_confounder_cols]
-
-# Initialize and fit the causal model
-#est = CausalForestDML(discrete_treatment=True)
-
-# est.fit(Y=df_enriched['target'], T=df_enriched['treatment'], X=X, W=W)
-
+    # Formatting
+    plt.title(f'Distribution of Treatment{title_suffix}', fontsize=14, pad=15)
+    plt.xlabel('Treatment', fontsize=12)
+    plt.ylabel('Frequency', fontsize=12)
+    plt.legend()
+    plt.grid(axis='y', alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
