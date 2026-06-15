@@ -100,8 +100,41 @@ def add_seasonal_harmonics(df, timestamp_col, periods):
     return df_out, new_cols
 
 
+def filter_rare_categories(df, categorical_cols, threshold, replacement="__NONE__"):
+    """
+    Replaces rare categories in the specified columns with a replacement value
+    rather than dropping the rows.
 
-def filter_rare_categories(df, categorical_cols, threshold):
+    Parameters:
+    - df (pd.DataFrame): Input DataFrame
+    - categorical_cols (list): List of column names
+    - threshold (float): Minimum frequency threshold (0.0 to 1.0)
+    - replacement (str): The value to use for rare categories
+
+    Returns:
+    - pd.DataFrame: Modified DataFrame
+    """
+    df_filtered = df.copy()
+
+    for col in categorical_cols:
+        # Calculate frequencies
+        freq = df_filtered[col].value_counts(normalize=True)
+        # Identify categories that meet the threshold
+        valid_categories = freq[freq >= threshold].index
+        
+        # If the column is a Categorical type, we must add the replacement to the categories first
+        if pd.api.types.is_categorical_dtype(df_filtered[col]):
+            if replacement not in df_filtered[col].cat.categories:
+                df_filtered[col] = df_filtered[col].cat.add_categories([replacement])
+        
+        # Replace values not in valid_categories with the replacement string
+        df_filtered.loc[~df_filtered[col].isin(valid_categories), col] = replacement
+        
+        print(f"Column '{col}': Kept {len(valid_categories)} categories. Others mapped to {replacement}.")
+
+    return df_filtered
+
+def filter_rare_categories_(df, categorical_cols, threshold):
     """
     Removes rows from the DataFrame where any specified categorical column
     has a category whose relative frequency is below the threshold.
