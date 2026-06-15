@@ -144,7 +144,33 @@ def catboost_style_encoding(df, categorical_cols, target_col, n_splits=5, global
 
 import pandas as pd
 
-def apply_catboost_encoding(df: pd.DataFrame, target: pd.Series, cols_to_encode: list) -> pd.DataFrame:
+def apply_catboost_encoding(df: pd.DataFrame, target: pd.Series, cols_to_encode: list) -> tuple:
+    """
+    Encodes specified columns using CatBoost encoding and adds them to the dataframe 
+    as new '_encoded' columns, preserving the originals and the index.
+    
+    Returns:
+    - df: The updated DataFrame
+    - new_column_names: A list of the newly created column names
+    """
+    # Initialize the encoder
+    encoder = CatBoostEncoder(cols=cols_to_encode)
+    
+    # Generate the encoded values
+    # We fit_transform on the original columns using the target
+    encoded_values = encoder.fit_transform(df[cols_to_encode], target)
+    
+    # Rename these new columns so they are clearly identified as the numeric versions
+    new_column_names = [f"{col}_encoded" for col in cols_to_encode]
+    encoded_values.columns = new_column_names
+    
+    # Concatenate directly to the original dataframe
+    df_result = pd.concat([df, encoded_values], axis=1)
+    
+    return df_result, new_column_names
+
+
+def apply_catboost_encoding_(df: pd.DataFrame, target: pd.Series, cols_to_encode: list) -> pd.DataFrame:
     """
     Encodes specified columns using CatBoost encoding and adds them to the dataframe 
     as new '_encoded' columns, preserving the originals and the index.
