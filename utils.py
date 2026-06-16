@@ -162,3 +162,44 @@ def filter_rare_categories_(df, categorical_cols, threshold):
 
     return df_filtered
 
+from sklearn.preprocessing import OrdinalEncoder
+from typing import List, Dict, Any, Tuple
+
+import gc
+def apply_ordinal_encoding(df: pd.DataFrame, cols_to_encode: list) -> Tuple[pd.DataFrame, list]:
+    """
+    Applies OrdinalEncoder to specified columns and adds them to the DataFrame.
+    
+    Args:
+        df: The input pandas DataFrame.
+        cols_to_encode: List of column names to encode.
+        
+    Returns:
+        Updated DataFrame and a list of the new ordinal column names.
+    """
+    if not cols_to_encode:
+        return df, []
+        
+    enc = OrdinalEncoder(
+        handle_unknown='use_encoded_value',
+        unknown_value=-1,
+        dtype=int
+    )
+
+    # Fit and transform
+    encoded = enc.fit_transform(df[cols_to_encode])
+    
+    new_cols = [f"{c}_ord" for c in cols_to_encode]
+    
+    # Create temporary DataFrame for the encoded columns
+    encoded_df = pd.DataFrame(
+        encoded,
+        columns=new_cols,
+        index=df.index
+    ).astype('Int64')
+
+    # Concatenate and cleanup
+    df = pd.concat([df, encoded_df], axis=1)
+    gc.collect()
+    
+    return df, new_cols
