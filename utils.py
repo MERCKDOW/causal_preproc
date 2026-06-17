@@ -165,7 +165,7 @@ def filter_rare_categories_(df, categorical_cols, threshold):
 from sklearn.preprocessing import OrdinalEncoder
 from typing import List, Dict, Any, Tuple
 
-import gc
+
 def apply_ordinal_encoding(df: pd.DataFrame, cols_to_encode: list) -> Tuple[pd.DataFrame, list]:
     """
     Applies OrdinalEncoder to specified columns and adds them to the DataFrame.

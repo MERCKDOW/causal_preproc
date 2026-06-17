@@ -204,7 +204,67 @@ def optimal_binning_dml(df, columns, target=None, bin_candidates=(3, 4, 5), frac
 
     return df_updated, new_ohe_cols
 
+import pandas as pd
+from typing import List, Tuple
 
+def create_joint_treatment_labels(
+    df: pd.DataFrame, 
+    discount_cols: List[str], 
+    lead_cols: List[str], 
+    joint_col_name: str = "joint_treatment"
+) -> Tuple[pd.DataFrame, List[str]]:
+    """
+    Decodes one-hot encoded discount and lead time columns and merges them 
+    into a single categorical joint treatment column for EconML's CausalForestDML.
+    
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        The input dataframe containing the OHE columns.
+    discount_cols : List[str]
+        List of column names representing the one-hot encoded discount bins.
+    lead_cols : List[str]
+        List of column names representing the one-hot encoded lead time bins.
+    joint_col_name : str, default "joint_treatment"
+        The desired name for the newly created joint treatment column.
+        
+    Returns:
+    --------
+    Tuple[pd.DataFrame, List[str]]
+        A tuple containing:
+        1. The updated DataFrame with the new joint column.
+        2. A list containing the name of the new column.
+        
+    Raises:
+    -------
+    ValueError:
+        If columns are missing or if the OHE data violates mutually exclusive 
+        and exhaustive properties (i.e., row sum != 1).
+    """
+    # 1. Defensive check: Ensure all specified columns actually exist
+    missing_cols = [c for c in discount_cols + lead_cols if c not in df.columns]
+    if missing_cols:
+        raise ValueError(f"The following expected OHE columns are missing from the DataFrame: {missing_cols}")
+        
+    # 2. Integrity check: Verify strict One-Hot Encoding (exactly one '1' per row)
+    # This prevents subtle bugs where rows are mislabeled due to all 0s or multiple 1s
+    if not (df[discount_cols].sum(axis=1) == 1).all():
+        raise ValueError("OHE Integrity Failure: Some rows do not have exactly one active column in 'discount_cols'.")
+    if not (df[lead_cols].sum(axis=1) == 1).all():
+        raise ValueError("OHE Integrity Failure: Some rows do not have exactly one active column in 'lead_cols'.")
+        
+    # 3. Vectorized decoding of OHE back to string labels using idxmax
+    # idxmax(axis=1) returns the column name where the value is 1 (the max value)
+    discount_labels = df[discount_cols].idxmax(axis=1)
+    lead_labels = df[lead_cols].idxmax(axis=1)
+    
+    # 4. Create a clean copy to prevent mutating the original df or triggering pandas warnings
+    df_updated = df.copy()
+    
+    # 5. Concatenate strings to create the joint treatment label
+    df_updated[joint_col_name] = discount_labels + "_x_" + lead_labels
+    
+    return df_updated, [joint_col_name]
 #-------
 #DYNAMIC USAGE
 #-------

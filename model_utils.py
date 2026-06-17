@@ -9,11 +9,63 @@ from xgboost import XGBClassifier, XGBRegressor
 
 
 
-
-
-
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from typing import List, Dict, Any
+from econml.dml import CausalForestDML
+from xgboost import XGBClassifier, XGBRegressor
+from sklearn.preprocessing import OrdinalEncoder
 
 def train_causal_models(
+    df: pd.DataFrame,
+    X_cols: List[str],
+    W_cols: List[str],
+    y_col: str,
+    treatments_config: List[Dict[str, List[str]]],
+    random_state: int = 42
+) -> Dict[str, Dict[str, Any]]:
+
+    trained_models = {}
+    Y = df[y_col].values
+    X = df[X_cols].values if X_cols else None
+    W = df[W_cols].values if W_cols else None
+
+    for treatment_dict in treatments_config:
+        for treatment_name, cols in treatment_dict.items():
+            # Logic fix: Handle single string column vs OHE columns
+            if len(cols) == 1 and df[cols[0]].dtype == 'object':
+                # It's a single categorical string column (like joint_treatment)
+                print(f"Encoding categorical treatment: {cols[0]}")
+                enc = OrdinalEncoder()
+                T = enc.fit_transform(df[cols]).flatten().astype(int)
+                ohe_cols_list = list(enc.categories_[0]) # Save category names for later mapping
+            else:
+                # It's a list of OHE columns
+                T_ohe = df[cols].values
+                T = np.argmax(T_ohe, axis=1)
+                ohe_cols_list = cols
+
+            model = CausalForestDML(
+                model_y=XGBRegressor(random_state=random_state),
+                model_t=XGBClassifier(random_state=random_state),
+                discrete_treatment=True,
+                random_state=random_state
+            )
+
+            model.fit(Y, T, X=X, W=W)
+
+            trained_models[treatment_name] = {
+                'model': model,
+                'ohe_cols': ohe_cols_list
+            }
+
+    return trained_models
+
+
+
+def train_causal_models_does_not_work(
     df: pd.DataFrame,
     X_cols: List[str],
     W_cols: List[str],
