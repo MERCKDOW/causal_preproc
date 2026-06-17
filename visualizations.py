@@ -69,8 +69,60 @@ def plot_T_histogram(scores, clip_outliers=False):
     plt.show()
 
 
-
+#import matplotlib.pyplot as plt
+#import seaborn as sns
+#from typing import List, Dict, Any
 def plot_cate_heatmaps(
+    aggregated_results: Dict[str, Dict[str, Any]], 
+    cmap: str = "coolwarm", 
+    figsize: tuple = (12, 8)
+) -> None:
+    """
+    Generates partitioned heatmaps for aggregated CATEs with robust color scaling.
+    """
+    for cat_col, result in aggregated_results.items():
+        data_df = result['data']
+        treatment_order = result['treatment_order'] 
+
+        # Robust color scaling: use percentiles to define min/max color bounds
+        # This keeps the color gradient sensitive even if there are outliers
+        flat_values = data_df.values.flatten()
+        v_min = np.percentile(flat_values, 5)
+        v_max = np.percentile(flat_values, 95)
+        # Ensure 0 is centered if using a diverging cmap like 'coolwarm'
+        abs_max = max(abs(v_min), abs(v_max))
+
+        vlines_indices = []
+        if treatment_order:
+            current_group = treatment_order[0][0]
+            for idx, (group, _) in enumerate(treatment_order):
+                if group != current_group:
+                    vlines_indices.append(idx)
+                    current_group = group
+
+        plt.figure(figsize=figsize)
+        ax = sns.heatmap(
+            data_df, 
+            annot=True, 
+            cmap=cmap, 
+            center=0, 
+            vmin=-abs_max, # Robustly scaled bounds
+            vmax=abs_max,
+            fmt=".3f",
+            cbar_kws={'label': 'Average CATE'}
+        )
+
+        for vline_idx in vlines_indices:
+            ax.axvline(x=vline_idx, color='black', linewidth=2.5, linestyle='--')
+
+        plt.title(f'Average Conditional Treatment Effects by {cat_col} (Robust Scaling)', pad=20, fontsize=14)
+        plt.xlabel('Treatment Levels', labelpad=15)
+        plt.ylabel(cat_col, labelpad=15)
+        plt.xticks(rotation=45, ha='right')
+        plt.tight_layout()
+        plt.show()
+
+def plot_cate_heatmaps_(
     aggregated_results: Dict[str, Dict[str, Any]], 
     cmap: str = "coolwarm", 
     figsize: tuple = (12, 8)
