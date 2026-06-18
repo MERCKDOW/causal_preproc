@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import List, Dict, Any
-
 def plot_T_histogram(scores, clip_outliers=False):
     """
     Plots a histogram of Treatment values, automatically handling 
@@ -69,9 +68,7 @@ def plot_T_histogram(scores, clip_outliers=False):
     plt.show()
 
 
-#import matplotlib.pyplot as plt
-#import seaborn as sns
-#from typing import List, Dict, Any
+
 def plot_cate_heatmaps(
     aggregated_results: Dict[str, Dict[str, Any]], 
     cmap: str = "coolwarm", 

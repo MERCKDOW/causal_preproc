@@ -62,6 +62,72 @@ def train_causal_models(
             }
 
     return trained_models
+# Re-run training with the joint treatment column name passed as a list
+from sklearn.calibration import CalibratedClassifierCV
+# Calibrate the propensity model to prevent overlap failure
+#model_t_calibrated = CalibratedClassifierCV(
+#    estimator=XGBClassifier(max_depth=4, min_child_weight=20, subsample=0.8),
+#    method='isotonic',
+#    cv=5
+#)
+
+# Robust outcome model
+#model_y_robust = XGBRegressor(max_depth=5, min_child_weight=15, subsample=0.8)
+
+def train_causal_models_joint_treatment(
+    df: pd.DataFrame,
+    X_cols: List[str],
+    W_cols: List[str],
+    y_col: str,
+    treatments_config: List[Dict[str, List[str]]],
+    random_state: int = 42
+) -> Dict[str, Dict[str, Any]]:
+
+    trained_models = {}
+    Y = df[y_col].values
+    X = df[X_cols].values if X_cols else None
+    W = df[W_cols].values if W_cols else None
+
+    for treatment_dict in treatments_config:
+        for treatment_name, cols in treatment_dict.items():
+            # Logic fix: Handle single string column vs OHE columns
+            if len(cols) == 1 and df[cols[0]].dtype == 'object':
+                # It's a single categorical string column (like joint_treatment)
+                print(f"Encoding categorical treatment: {cols[0]}")
+                enc = OrdinalEncoder()
+                T = enc.fit_transform(df[cols]).flatten().astype(int)
+                ohe_cols_list = list(enc.categories_[0]) # Save category names for later mapping
+            else:
+                # It's a list of OHE columns
+                T_ohe = df[cols].values
+                T = np.argmax(T_ohe, axis=1)
+                ohe_cols_list = cols
+
+            model = CausalForestDML(
+                #model_y=XGBRegressor(random_state=random_state),
+                #model_t=XGBClassifier(random_state=random_state),
+                model_y=XGBRegressor(max_depth=5, min_child_weight=15, subsample=0.8),
+                model_y=XGBClassifier(max_depth=4, min_child_weight=20, subsample=0.8),
+                #model_t=CalibratedClassifierCV(estimator=XGBClassifier(max_depth=4, min_child_weight=20, subsample=0.8),
+                #                                method='isotonic',
+                #                                cv=5
+                #                              ),
+
+                discrete_treatment=True,
+                n_estimators=2000,
+                min_samples_leaf=50,
+                cv=10,
+                random_state=random_state
+            )
+
+            model.fit(Y, T, X=X, W=W)
+
+            trained_models[treatment_name] = {
+                'model': model,
+                'ohe_cols': ohe_cols_list
+            }
+
+    return trained_models
 
 
 
