@@ -107,7 +107,7 @@ def train_causal_models_joint_treatment(
                 #model_y=XGBRegressor(random_state=random_state),
                 #model_t=XGBClassifier(random_state=random_state),
                 model_y=XGBRegressor(max_depth=5, min_child_weight=15, subsample=0.8),
-                model_y=XGBClassifier(max_depth=4, min_child_weight=20, subsample=0.8),
+                model_t=XGBClassifier(max_depth=4, min_child_weight=20, subsample=0.8),
                 #model_t=CalibratedClassifierCV(estimator=XGBClassifier(max_depth=4, min_child_weight=20, subsample=0.8),
                 #                                method='isotonic',
                 #                                cv=5
