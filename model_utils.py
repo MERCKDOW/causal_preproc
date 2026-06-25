@@ -174,6 +174,9 @@ def train_causal_models_does_not_work(
                 model_y=XGBRegressor(random_state=random_state),
                 model_t=XGBClassifier(random_state=random_state),
                 discrete_treatment=True,
+                n_estimators=2000,
+                min_samples_leaf=50,
+                cv=10,                
                 random_state=random_state
             )
 
