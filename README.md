@@ -1,3 +1,18 @@
+## **causal_preproc** ##
+A collection of utilities designed to streamline preprocessing, modeling, and visualization workflows for causal analysis.
+Key Modules
+ * Encoding: Specialized functions for categorical variable processing.
+ * Binning: Tools for discretizing continuous treatments.
+ * Modeling:
+   * Training Utilities: Helper functions for efficient model training routines.
+   * Wrappers: Standardized interfaces for consistent model implementation.
+ * Visualization: Tools for plotting diagnostics and analyzing results.
+ * General Utilities: A library of helper functions for data manipulation and workflow management.
+
+
+
+
+
 ## **CausalForestDML: Methodology** ##
 
 This module implements the Double Machine Learning (DML) framework to estimate heterogeneous treatment effects.
